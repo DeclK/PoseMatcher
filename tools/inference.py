@@ -1,12 +1,68 @@
-from mmengine.registry import count_registered_modules, init_default_scope
-import mmdet.models
-
+import torch
 from mmengine.registry import MODELS
+from mmengine.dataset import Compose, pseudo_collate
+from mmengine.model.utils import revert_sync_batchnorm
+from mmengine.registry import init_default_scope
+from mmengine.runner import load_checkpoint
+from mmengine.config import Config
 
-def build_model(cfg):
+def build_model(cfg, checkpoint=None, device='cpu'):
+    """ Build model from config and load checkpoint
+    checkpoint_meta usually contains dataset classes information
+    """
+    if isinstance(cfg, str):
+        cfg = Config.fromfile(cfg)
     # scope of model, e.g. mmdet, mmseg, mmpose...
-    scope = cfg.default_scope
-    init_default_scope(scope)
-    model = MODELS.build(cfg)
+    init_default_scope(cfg.default_scope)
+    model = MODELS.build(cfg.model)
+    model = revert_sync_batchnorm(model)
+    if checkpoint is not None:
+        ckpt = load_checkpoint(model, checkpoint,
+                            map_location='cpu')
+        checkpoint_meta = ckpt.get('meta', {})
+        # usually classes and pallate are in checkpoint_meta
+        model.checkpoint_meta = checkpoint_meta
+    model.to(device)
+    model.eval()
     return model
+
+def inference(model, cfg, img):
+    """ Given model, config and image, return inference results.
+    Models in mmlab does not share the same inference api. So this
+    function is just a memo for me...
+    """
+    if isinstance(cfg, str):
+        cfg = Config.fromfile(cfg)
+    # process pipline
+    test_pipeline = cfg.test_dataloader.dataset.pipeline
+    # Use 'LoadImage' to handle both cases of img and img_path
+    # This is specially designed for mmdet config, which uses 'LoadImageFromFile'
+    for pipeline in test_pipeline:
+        if 'LoadImage' in pipeline['type']:
+            pipeline['type'] = 'mmpose.LoadImage'
+
+    init_default_scope(cfg.default_scope)
+    pipeline = Compose(test_pipeline)
+
+    if isinstance(img, str):
+        # img_id is useless...but to be compatible with mmdet
+        data_info = dict(img_path=img, img_id=0)
+    else:
+        data_info = dict(img=img, img_id=0)
+
+    data = pipeline(data_info)
+    batch = pseudo_collate([data])
     
+    with torch.no_grad():
+        results = model.test_step(batch)
+
+    return results
+
+
+if __name__ == '__main__':
+    config = '/github/Tennis.ai/model_zoo/rtmpose/rtmpose-t_8xb256-420e_aic-coco-256x192/rtmpose-t_8xb256-420e_aic-coco-256x192.py'
+    ckpt = '/github/Tennis.ai/model_zoo/rtmpose/rtmpose-t_8xb256-420e_aic-coco-256x192/rtmpose-tiny_simcc-aic-coco_pt-aic-coco_420e-256x192-cfc8f33d_20230126.pth'
+    img = '/github/Tennis.ai/assets/000000197388.jpg'
+
+    detector = build_model(config, checkpoint=ckpt)
+    result = inference(detector, config, img)

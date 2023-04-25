@@ -6,8 +6,11 @@ from mmengine.config import Config
 class Manager:
 
     def __init__(self, path=None) -> None:
-
-        if path: # root path of projects
+        """ 
+        Params:
+            - path: root path of projects to save checkpoints and configs
+        """
+        if path:
             self.path = Path(path)
         else:
             self.path = Path(__file__).parents[1]   
@@ -65,5 +68,5 @@ class Manager:
 
 if __name__ == '__main__':
     m = Manager()
-    print(m.get_model_infos('mmdet', 'rtmdet'))
-    m.download('mmdet', 'rtmdet_tiny_8xb32-300e_coco', config_only=True)
+    print(m.get_model_infos('mmpose', 'rtmpose-t'))
+    m.download('mmpose', 'rtmpose-t_8xb256-420e_aic-coco-256x192', config_only=True)

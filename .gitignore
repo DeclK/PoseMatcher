@@ -1,2 +1,5 @@
 *.pth
+*.pkl
+*.mp4
 tempt*
+**pycache**
