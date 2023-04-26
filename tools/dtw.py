@@ -1,5 +1,5 @@
 import numpy as np
-from utils import get_keypoint_weight
+from .utils import get_keypoint_weight
 
 
 class DTWForKeypoints:

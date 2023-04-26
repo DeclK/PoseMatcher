@@ -1,5 +1,6 @@
 *.pth
 *.pkl
 *.mp4
+*.onnx
 tempt*
 **pycache**

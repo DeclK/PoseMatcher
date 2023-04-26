@@ -68,5 +68,5 @@ class Manager:
 
 if __name__ == '__main__':
     m = Manager()
-    print(m.get_model_infos('mmpose', 'rtmpose-t'))
-    m.download('mmpose', 'rtmpose-t_8xb256-420e_aic-coco-256x192', config_only=True)
+    print(m.get_model_infos('mmdet', 'det'))
+    # m.download('mmpose', 'rtmpose-t_8xb256-420e_aic-coco-256x192', config_only=True)
