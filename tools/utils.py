@@ -1,5 +1,6 @@
 from mmdet.datasets import CocoDataset
 import time
+from easydict import EasyDict
 import numpy as np
 
 def coco_keypoint_id_table(reverse=False):
@@ -23,6 +24,18 @@ def coco_keypoint_id_table(reverse=False):
     if reverse:
         return {v: k for k, v in id2name.items()}
     return id2name
+
+def get_skeleton():
+    """ My skeleton links, I deleted some links from default coco style.
+    """
+    SKELETON = EasyDict()
+    SKELETON.head = [[0,1], [0,2], [1,3], [2,4]]
+    SKELETON.left_arm = [[5, 7], [7, 9]]
+    SKELETON.right_arm = [[6, 8], [8, 10]]
+    SKELETON.left_leg = [[11, 13], [13, 15]]
+    SKELETON.right_leg = [[12, 14], [14, 16]]
+    SKELETON.body = [[5, 6], [5, 11], [6, 12], [11, 12]]
+    return SKELETON
 
 def get_keypoint_weight(low_weight_ratio=0.1):
     """ Get keypoint weight, used in object keypoint similarity,
@@ -66,21 +79,6 @@ def filter_by_score(bboxes, scores, labels, score_thr):
     mask = scores > score_thr
     return bboxes[mask], scores[mask], labels[mask]
 
-def concat(img1, img2, height=1080):
-    h1, w1, _ = img1.shape
-    h2, w2, _ = img2.shape
-
-    # Calculate the scaling factor for each image
-    scale1 = height / img1.shape[0]
-    scale2 = height / img2.shape[0]
-
-    # Resize the images
-    img1 = cv2.resize(img1, (int(w1*scale1), int(h1*scale1)))
-    img2 = cv2.resize(img2, (int(w2*scale2), int(h2*scale2)))
-
-    # Concatenate the images horizontally
-    image = cv2.hconcat([img1, img2])
-    return image
 
 class Timer:
     def __init__(self):

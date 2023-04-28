@@ -42,13 +42,13 @@ def main(cfg):
     v2 = mmcv.VideoReader(cfg.video2)
     video_writer = None
 
-    all_det1, all_pose1 = pose_inferencer.inference_video(cfg.video1)
+    all_det1, all_pose1 = pose_inferencer.inference_video(cfg.video1, draw_picture=True)
     all_det2, all_pose2 = pose_inferencer.inference_video(cfg.video2)
 
     keypoints1 = np.stack([p.keypoints[0] for p in all_pose1])
     keypoints2 = np.stack([p.keypoints[0] for p in all_pose2])
 
-    dtw_path = DTWForKeypoints(keypoints1, keypoints2).get_dtw_path()
+    dtw_path, oks_unnorm = DTWForKeypoints(keypoints1, keypoints2).get_dtw_path()
 
     for i, j in tqdm(dtw_path): 
         frame1 = v1[i]

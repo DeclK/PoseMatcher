@@ -5,9 +5,10 @@ from collections import namedtuple
 import cv2 as cv
 from tqdm import tqdm
 from mmengine.registry import init_default_scope
+from mmengine.visualization import Visualizer
 from mmpose.apis import inference_topdown, init_model
 from mmdet.apis import inference_detector, init_detector
-from .utils import filter_by_catgory, filter_by_score
+from .utils import filter_by_catgory, filter_by_score, Timer
 from .apis import build_onnx_model_and_task_processor, inference_onnx_model
 
 
@@ -146,17 +147,41 @@ class PoseInferencerV2:
         """
         video_reader = mmcv.VideoReader(video_path)
         video_writer = None
-
-        draw_picture = False
-
+        if draw_picture:
+            vis = Visualizer(vis_backends=dict(type='LocalVisBackend', 
+                                               save_dir='vis'))
         all_pose = []
         all_det = []
 
+        timer = Timer()
         for frame in tqdm(video_reader):
             # inference with detector
             det, pose = self.process_one_image(frame)
             all_pose.append(pose)
             all_det.append(det)
             # TODO: draw image
+            if draw_picture:
+                timer.start()
+                vis.set_image(frame)
+                print(f'vis set image time: {timer.click()}')
+                vis.draw_bboxes(det[0])
+                print(f'draw bboxes: {timer.click()}')
+                vis.draw_points(pose[0].reshape(-1, 2))
+                print(f'draw points: {timer.click()}')
+                image = vis.get_image()
+                print(f'get image: {timer.click()}')
+                # use opencv to write the image to video
+                # import pdb; pdb.set_trace()
+                if video_writer is None:
+                    fourcc = cv.VideoWriter_fourcc(*'XVID')
+                    video_writer = cv.VideoWriter('output1.mp4',
+                                                  fourcc,
+                                                  video_reader.fps,
+                                                  (video_reader.width, video_reader.height))
+                video_writer.write(image)
+                print(f'write time: {timer.click()}')
+                
+        if video_writer is not None:
+            video_writer.release()
 
         return all_det, all_pose

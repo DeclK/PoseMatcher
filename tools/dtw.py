@@ -13,16 +13,15 @@ class DTWForKeypoints:
         norm_kp2 = self.normalize_keypoints(self.keypoints2)
 
         kp_weight = get_keypoint_weight()
-        oks = self.object_keypoint_similarity(norm_kp1,
-                                              norm_kp2,
-                                              keypoint_weights=kp_weight)
+        oks, oks_unnorm = self.object_keypoint_similarity(norm_kp1,
+                               norm_kp2, keypoint_weights=kp_weight)
         print(f"OKS max {oks.max():.2f} min {oks.min():.2f}")
 
         # do the DTW, and return the path
         cost_matrix = 1 - oks
         dtw_dist, dtw_path = self.dynamic_time_warp(cost_matrix)
 
-        return dtw_path
+        return dtw_path, oks_unnorm
         
     def normalize_keypoints(self, keypoints):
         centroid = keypoints.mean(axis=1)[:, None]
@@ -50,6 +49,7 @@ class DTWForKeypoints:
         sq_diff = np.sum((keypoints1[:, None] - keypoints2) ** 2, axis=-1)
         
         oks = np.exp(-sq_diff / (2 * scale_constant ** 2))
+        oks_unnorm = oks.copy()
         
         if keypoint_weights is not None:
             oks = oks * keypoint_weights
@@ -57,7 +57,7 @@ class DTWForKeypoints:
         else:
             oks = np.mean(oks, axis=-1)
         
-        return oks
+        return oks, oks_unnorm
 
     def dynamic_time_warp(self, cost_matrix, R=1000):
         """Compute the Dynamic Time Warping distance and path between two time series.
