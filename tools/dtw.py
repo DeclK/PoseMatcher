@@ -21,7 +21,7 @@ class DTWForKeypoints:
         cost_matrix = 1 - oks
         dtw_dist, dtw_path = self.dynamic_time_warp(cost_matrix)
 
-        return dtw_path, oks_unnorm
+        return dtw_path, oks, oks_unnorm
         
     def normalize_keypoints(self, keypoints):
         centroid = keypoints.mean(axis=1)[:, None]
@@ -39,7 +39,7 @@ class DTWForKeypoints:
 
     def object_keypoint_similarity(self, keypoints1,
                                 keypoints2,
-                                scale_constant=0.5,
+                                scale_constant=0.2,
                                 keypoint_weights=None):
         """ Calculate the Object Keypoint Similarity (OKS) for multiple objects,
         and add weight to each keypoint. Here we choose to normalize the points

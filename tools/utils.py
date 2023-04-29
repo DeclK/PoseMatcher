@@ -37,17 +37,21 @@ def get_skeleton():
     SKELETON.body = [[5, 6], [5, 11], [6, 12], [11, 12]]
     return SKELETON
 
-def get_keypoint_weight(low_weight_ratio=0.1):
+def get_keypoint_weight(low_weight_ratio=0.1, mid_weight_ratio=0.5):
     """ Get keypoint weight, used in object keypoint similarity,
     `low_weight_names` are points I want to pay less attention.
     """
     low_weight_names = ['nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear']
+    mid_weight_names = ['left_shoulder', 'right_shoulder', 'left_hip', 'right_hip']
+
     logtis = np.ones(17)
     name2id = coco_keypoint_id_table(reverse=True)
 
     low_weight_id = [name2id[n] for n in low_weight_names]
+    mid_weight_id = [name2id[n] for n in mid_weight_names]
     logtis[low_weight_id] = low_weight_ratio
-    # numpy softmax
+    logtis[mid_weight_id] = mid_weight_ratio
+
     weights = logtis / np.sum(logtis)
     return weights
 

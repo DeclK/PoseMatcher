@@ -119,16 +119,17 @@ class PoseInferencerV2:
         bboxes, scores, labels = filter_by_score(bboxes, scores,
                                                  labels, 0.5)
         bboxes, scores, labels = filter_by_catgory(bboxes, scores, labels, 
-                                ['person', 'tennis racket', 'sports ball'])
-        person_bboxes, _, _= filter_by_catgory(bboxes, scores,
-                                               labels, ['person'])
+                                                    ['person'])
         # inference with pose model
         init_default_scope('mmpose')
-        pose_result = inference_topdown(self.pose_model, img, person_bboxes)
+        pose_result = inference_topdown(self.pose_model, img, bboxes)
         if len(pose_result) == 0:
-            # no person place holder, and bboxes len is 0
+            # no detection place holder
             keypoints = np.zeros((1, 17, 2))
             pts_scores = np.zeros((1, 17))
+            bboxes = np.zeros((1, 4))
+            scores = np.zeros((1, ))
+            labels = np.zeros((1, ))
         else:
             keypoints = np.concatenate([r.pred_instances.keypoints 
                                             for r in pose_result])
@@ -139,49 +140,19 @@ class PoseInferencerV2:
         PoseInst = namedtuple('PoseInst', ['keypoints', 'pts_scores'])
         return DetInst(bboxes, scores, labels), PoseInst(keypoints, pts_scores)
 
-    def inference_video(self, video_path, draw_picture=False):
+    def inference_video(self, video_path):
         """ Inference a video with detector and pose model
         Return:
             all_pose: a list of PoseInst, check the namedtuple definition
             all_det: a list of DetInst
         """
         video_reader = mmcv.VideoReader(video_path)
-        video_writer = None
-        if draw_picture:
-            vis = Visualizer(vis_backends=dict(type='LocalVisBackend', 
-                                               save_dir='vis'))
-        all_pose = []
-        all_det = []
+        all_pose, all_det = [], []
 
-        timer = Timer()
         for frame in tqdm(video_reader):
             # inference with detector
             det, pose = self.process_one_image(frame)
             all_pose.append(pose)
             all_det.append(det)
-            # TODO: draw image
-            if draw_picture:
-                timer.start()
-                vis.set_image(frame)
-                print(f'vis set image time: {timer.click()}')
-                vis.draw_bboxes(det[0])
-                print(f'draw bboxes: {timer.click()}')
-                vis.draw_points(pose[0].reshape(-1, 2))
-                print(f'draw points: {timer.click()}')
-                image = vis.get_image()
-                print(f'get image: {timer.click()}')
-                # use opencv to write the image to video
-                # import pdb; pdb.set_trace()
-                if video_writer is None:
-                    fourcc = cv.VideoWriter_fourcc(*'XVID')
-                    video_writer = cv.VideoWriter('output1.mp4',
-                                                  fourcc,
-                                                  video_reader.fps,
-                                                  (video_reader.width, video_reader.height))
-                video_writer.write(image)
-                print(f'write time: {timer.click()}')
-                
-        if video_writer is not None:
-            video_writer.release()
 
         return all_det, all_pose
