@@ -1,0 +1,11 @@
+openmim
+mmengine
+mmcv
+mmdet
+mmpose
+mmdeploy
+onnxruntime
+tqdm
+scikit-image
+easydict
+gradio

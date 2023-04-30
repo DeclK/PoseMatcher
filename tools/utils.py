@@ -1,5 +1,9 @@
 from mmdet.datasets import CocoDataset
 import time
+from pathlib import Path
+from ffmpy import FFmpeg
+import shutil
+import tempfile
 from easydict import EasyDict
 import numpy as np
 
@@ -83,6 +87,25 @@ def filter_by_score(bboxes, scores, labels, score_thr):
     mask = scores > score_thr
     return bboxes[mask], scores[mask], labels[mask]
 
+def convert_video_to_playable_mp4(video_path: str) -> str:
+    """ Copied from gradio
+    Convert the video to mp4. If something goes wrong return the original video.
+    """
+    try:
+        output_path = Path(video_path).with_suffix(".mp4")
+        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+            shutil.copy2(video_path, tmp_file.name)
+            # ffmpeg will automatically use h264 codec (playable in browser) when converting to mp4
+            ff = FFmpeg(
+                inputs={str(tmp_file.name): None},
+                outputs={str(output_path): None},
+                global_options="-y -loglevel quiet",
+            )
+            ff.run()
+    except:
+        print(f"Error converting video to browser-playable format {str(e)}")
+        output_path = video_path
+    return str(output_path)
 
 class Timer:
     def __init__(self):

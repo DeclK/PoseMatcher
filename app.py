@@ -3,12 +3,13 @@ from tools.inferencer import PoseInferencerV2
 from tools.dtw import DTWForKeypoints
 from tools.visualizer import FastVisualizer
 from argparse import ArgumentParser
-from tools.utils import convert_video_to_playable_mp4
+from pathlib import Path
 from tqdm import tqdm
 import mmengine
 import numpy as np
 import mmcv
 import cv2
+import gradio as gr
 
 def parse_args():
     parser = ArgumentParser()
@@ -41,19 +42,21 @@ def draw(vis: FastVisualizer, img, keypoint, box, oks, oks_unnorm, draw_score_ba
     vis.draw_human_keypoints(keypoint, oks_unnorm)
     return vis.get_image()
 
-def main(cfg):
+def main(video1, video2):
     # build PoseInferencerV2
+    config = 'configs/mark2.py'
+    cfg = mmengine.Config.fromfile(config)
     pose_inferencer = PoseInferencerV2(
                         cfg.det_cfg,
                         cfg.pose_cfg,
                         device='cpu')
     
-    v1 = mmcv.VideoReader(cfg.video1)
-    v2 = mmcv.VideoReader(cfg.video2)
+    v1 = mmcv.VideoReader(video1)
+    v2 = mmcv.VideoReader(video2)
     video_writer = None
 
-    all_det1, all_pose1 = pose_inferencer.inference_video(cfg.video1)
-    all_det2, all_pose2 = pose_inferencer.inference_video(cfg.video2)
+    all_det1, all_pose1 = pose_inferencer.inference_video(video1)
+    all_det2, all_pose2 = pose_inferencer.inference_video(video2)
 
     keypoints1 = np.stack([p.keypoints[0] for p in all_pose1])  # forced the first pred
     keypoints2 = np.stack([p.keypoints[0] for p in all_pose2])
@@ -85,12 +88,19 @@ def main(cfg):
                                             fourcc, v1.fps, (w, h))
         video_writer.write(frame)
     video_writer.release()
-    convert_video_to_playable_mp4('dtw_compare.mp4')
+    # output video file
+    output = str(Path('dtw_compare.mp4').resolve())
+    return output
 
 if __name__ == '__main__':
-    args = parse_args()
-    cfg = mmengine.Config.fromfile(args.config)
-    cfg.video1 = args.video1
-    cfg.video2 = args.video2
+    config = 'configs/mark2.py'
+    cfg = mmengine.Config.fromfile(config)
 
-    main(cfg)
+    inputs = [
+        gr.Video(label="Input video 1"),
+        gr.Video(label="Input video 2")
+    ]
+
+    output = gr.Video(label="Output video")
+
+    gr.Interface(fn=main, inputs=inputs, outputs=output).launch(share=True)

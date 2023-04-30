@@ -2,25 +2,22 @@
 
 An idea of using deep learning to tutor pose of playing tennis
 
-# Usage
+## Install
+### Python Environment
+1. Pytorch. Either cpu or gpu version is ok. This project can run ~8fps on CPU, which is acceptable. Here I offer the example command to install 1.11.0+cu113 version.
+   ```shell
+   pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --extra-index-url https://download.pytorch.org/whl/cu113
+   ```
+2. OpenMMLab pakcages. Thanks to the rich model zoo of OpenMMLab, I can use them to build this project. In this Project, I've managed to use [RTMDet](https://github.com/open-mmlab/mmdetection/tree/main/configs/rtmdet) and [RTMPose](https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose) with simple pip install.
+   ```shell
+   pip install -U openmim
+   mim install -r requirements.txt
+   ```
 ## Model Checkpoints & Configs
-Download the checkpoints and configs to the current folder
+Because of the messy configs of all kinds of OpenMMLab projects, it is not easy to get the model config by the project. The good news is that OpenMMLab has a great management tool: OpenMIM to solve this situation. It is not perfect, and some links are broken, but it gives you an overview of the model zoo.
+I've built a simple Manager to get the model config I need, just checkout `tools/manager.py`
 
-Because of the messy configs of MMLab, it is not easy to get the model config by the project.
-
-However, OpenMMLab offers a great management tool: OpenMIM to solve this situation.
-
-We need to install corresponding projects through pip, which is easy
-```shell
-pip install -U openmim
-mim install mmdet
-mim install mmpose
-```
-
-1. [RTMDet](https://github.com/open-mmlab/mmdetection/tree/main/configs/rtmdet)
-2. [RTMPose](https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose)
-
-I organize the model_zoo as 
+I organize the model_zoo as follow
 ```python
 
 - model_zoo
@@ -35,8 +32,9 @@ I organize the model_zoo as
         ...
 ```
 
-# Purpose
+## Highlight
 
-1. In this program, I want to explore the easy way to manipulate openmmlab models, which need me to explore a way to use registry from different projects.
-2. I want to build a minimum example of converting pytorch models to onnx.
-3. Use this to support tennis sports.
+🥳 Manipulate openmmlab models with easy apis
+😎 Model can run on CPU with acceptable speed
+🔥 Build a FastVisualizer with skimage, which more beatiful than OpenCV
+😀 Can be used to all kinds of pose comparison scenes. In my case, tennis pose analysis!

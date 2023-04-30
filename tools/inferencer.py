@@ -40,45 +40,41 @@ class PoseInferencer:
         bboxes, scores, labels = filter_by_score(bboxes, scores,
                                                  labels, 0.5)
         bboxes, scores, labels = filter_by_catgory(bboxes, scores, labels, 
-                                ['person', 'tennis racket', 'sports ball'])
-        person_bboxes, _, _= filter_by_catgory(bboxes, scores,
-                                               labels, ['person'])
+                                                   ['person'])
         # inference with pose model
         init_default_scope('mmpose')
-        # TODO: need to handle the non-person case
-        pose_result = inference_topdown(self.pose_model, img, person_bboxes)
-        keypoints = np.concatenate([r.pred_instances.keypoints 
-                                        for r in pose_result])
-        pts_scores = np.concatenate([r.pred_instances.keypoint_scores 
-                                        for r in pose_result])
+        pose_result = inference_topdown(self.pose_model, img, bboxes)
+        if len(pose_result) == 0:
+            # no detection place holder
+            keypoints = np.zeros((1, 17, 2))
+            pts_scores = np.zeros((1, 17))
+            bboxes = np.zeros((1, 4))
+            scores = np.zeros((1, ))
+            labels = np.zeros((1, ))
+        else:
+            keypoints = np.concatenate([r.pred_instances.keypoints 
+                                            for r in pose_result])
+            pts_scores = np.concatenate([r.pred_instances.keypoint_scores 
+                                            for r in pose_result])
 
         DetInst = namedtuple('DetInst', ['bboxes', 'scores', 'labels'])
         PoseInst = namedtuple('PoseInst', ['keypoints', 'pts_scores'])
         return DetInst(bboxes, scores, labels), PoseInst(keypoints, pts_scores)
 
-    def inference_video(self, video_path, draw_picture=False):
+    def inference_video(self, video_path):
         """ Inference a video with detector and pose model
         Return:
             all_pose: a list of PoseInst, check the namedtuple definition
             all_det: a list of DetInst
         """
         video_reader = mmcv.VideoReader(video_path)
-        video_writer = None
-
-        draw_picture = False
-
-        all_pose = []
-        all_det = []
+        all_pose, all_det = [], []
 
         for frame in tqdm(video_reader):
             # inference with detector
             det, pose = self.process_one_image(frame)
             all_pose.append(pose)
             all_det.append(det)
-            # draw image
-            if draw_picture:
-                pass
-                # TODO: use opencv to vis, which is much faster
 
         return all_det, all_pose
 
