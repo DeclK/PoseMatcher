@@ -157,8 +157,8 @@ class FastVisualizer:
         else: lvl_names = self.score_level_names(scores)
 
         for idx, (point, lvl_name) in enumerate(zip(keypoints, lvl_names)):
-            if idx in set((1, 2, 3, 4)): 
-                continue # do not draw eyes and years
+            if idx in set((0, 1, 2, 3, 4)): 
+                continue # do not draw head
             rectangle_xyhw = np.array((point[0], point[1], cube_size, cube_size))
             rectangle_xyxy = self.xyhw_to_xyxy(rectangle_xyhw)
             self.draw_rectangle(rectangle_xyxy, 

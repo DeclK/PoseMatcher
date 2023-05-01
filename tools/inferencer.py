@@ -29,6 +29,8 @@ class PoseInferencer:
         self.pose_model = init_model(self.pose_model_cfg,
                                      self.pose_model_ckpt,
                                      device=device)
+        # use this count to tell the progress
+        self.video_count = 0
 
     def process_one_image(self, img):
         init_default_scope('mmdet')
@@ -101,6 +103,8 @@ class PoseInferencerV2:
         self.pose_model = init_model(self.pose_model_cfg,
                                      self.pose_model_ckpt,
                                      device)
+        # use this count to tell the progress
+        self.video_count = 0
 
     def process_one_image(self, img):
         init_default_scope('mmdet')
@@ -145,10 +149,12 @@ class PoseInferencerV2:
         video_reader = mmcv.VideoReader(video_path)
         all_pose, all_det = [], []
 
-        for frame in tqdm(video_reader):
+        count = self.video_count + 1
+        for frame in tqdm(video_reader, desc=f'Inference video {count}'):
             # inference with detector
             det, pose = self.process_one_image(frame)
             all_pose.append(pose)
             all_det.append(det)
+        self.video_count += 1
 
         return all_det, all_pose

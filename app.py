@@ -2,7 +2,7 @@
 from tools.inferencer import PoseInferencerV2
 from tools.dtw import DTWForKeypoints
 from tools.visualizer import FastVisualizer
-from argparse import ArgumentParser
+from tools.utils import convert_video_to_playable_mp4
 from pathlib import Path
 from tqdm import tqdm
 import mmengine
@@ -10,13 +10,6 @@ import numpy as np
 import mmcv
 import cv2
 import gradio as gr
-
-def parse_args():
-    parser = ArgumentParser()
-    parser.add_argument('--config', type=str, default='configs/mark2.py')
-    parser.add_argument('--video1', type=str, default='assets/tennis1.mp4')
-    parser.add_argument('--video2', type=str, default='assets/tennis2.mp4')
-    return parser.parse_args()
 
 def concat(img1, img2, height=1080):
     w1, h1, _ = img1.shape
@@ -34,15 +27,19 @@ def concat(img1, img2, height=1080):
     image = cv2.hconcat([img1, img2])
     return image
 
-def draw(vis: FastVisualizer, img, keypoint, box, oks, oks_unnorm, draw_score_bar=True):
+def draw(vis: FastVisualizer, img, keypoint, box, oks, oks_unnorm, 
+         draw_human_keypoints=True,
+         draw_score_bar=True):
     vis.set_image(img)
     vis.draw_non_transparent_area(box)
     if draw_score_bar:
         vis.draw_score_bar(oks)
-    vis.draw_human_keypoints(keypoint, oks_unnorm)
+    if draw_human_keypoints:
+        vis.draw_human_keypoints(keypoint, oks_unnorm)
     return vis.get_image()
 
-def main(video1, video2):
+def main(video1, video2, draw_human_keypoints,
+         progress=gr.Progress(track_tqdm=True)):
     # build PoseInferencerV2
     config = 'configs/mark2.py'
     cfg = mmengine.Config.fromfile(config)
@@ -67,14 +64,14 @@ def main(video1, video2):
 
     vis = FastVisualizer()
     
-    for i, j in tqdm(dtw_path): 
+    for i, j in tqdm(dtw_path, desc='Visualizing'): 
         frame1 = v1[i]
         frame2 = v2[j]
 
         frame1_ = draw(vis, frame1.copy(), keypoints1[i], boxes1[i],
-                       oks[i, j], oks_unnorm[i, j])
+                       oks[i, j], oks_unnorm[i, j], draw_human_keypoints)
         frame2_ = draw(vis, frame2.copy(), keypoints2[j], boxes2[j],
-                       oks[i, j], oks_unnorm[i, j], draw_score_bar=False)
+                       oks[i, j], oks_unnorm[i, j], draw_human_keypoints, draw_score_bar=False)
         # concate two frames
         frame = concat(frame1_, frame2_)
         # draw logo
@@ -89,6 +86,7 @@ def main(video1, video2):
         video_writer.write(frame)
     video_writer.release()
     # output video file
+    convert_video_to_playable_mp4('dtw_compare.mp4')
     output = str(Path('dtw_compare.mp4').resolve())
     return output
 
@@ -98,9 +96,12 @@ if __name__ == '__main__':
 
     inputs = [
         gr.Video(label="Input video 1"),
-        gr.Video(label="Input video 2")
+        gr.Video(label="Input video 2"),
+        "checkbox"
     ]
 
     output = gr.Video(label="Output video")
 
-    gr.Interface(fn=main, inputs=inputs, outputs=output).launch(share=True)
+    demo = gr.Interface(fn=main, inputs=inputs, outputs=output,
+                        allow_flagging='never').queue()
+    demo.launch()
