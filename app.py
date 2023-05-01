@@ -12,16 +12,16 @@ import cv2
 import gradio as gr
 
 def concat(img1, img2, height=1080):
-    w1, h1, _ = img1.shape
-    w2, h2, _ = img2.shape
+    h1, w1, _ = img1.shape
+    h2, w2, _ = img2.shape
 
     # Calculate the scaling factor for each image
-    scale1 = height / img1.shape[1]
-    scale2 = height / img2.shape[1]
+    scale1 = height / img1.shape[0]
+    scale2 = height / img2.shape[0]
 
     # Resize the images
-    img1 = cv2.resize(img1, (int(h1*scale1), int(w1*scale1)))
-    img2 = cv2.resize(img2, (int(h2*scale2), int(w2*scale2)))
+    img1 = cv2.resize(img1, (int(w1*scale1), int(h1*scale1)))
+    img2 = cv2.resize(img2, (int(w2*scale2), int(h2*scale2)))
 
     # Concatenate the images horizontally
     image = cv2.hconcat([img1, img2])
