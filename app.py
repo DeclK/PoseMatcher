@@ -1,15 +1,17 @@
 # Inference 2 videos and use dtw to match the pose keypoints.
-from tools.inferencer import PoseInferencerV2
+from tools.inferencer import PoseInferencerV3
 from tools.dtw import DTWForKeypoints
 from tools.visualizer import FastVisualizer
-from tools.utils import convert_video_to_playable_mp4
-from pathlib import Path
+from tools.utils import convert_video_to_playable_mp4, add_logo_to_video
+from tools.video_reader import VideoReader
 from tqdm import tqdm
-import mmengine
-import numpy as np
-import mmcv
-import cv2
+from omegaconf import OmegaConf
+from pathlib import Path
+import pickle
+import time
 import gradio as gr
+import numpy as np
+import cv2
 
 def concat(img1, img2, height=1080):
     h1, w1, _ = img1.shape
@@ -28,80 +30,122 @@ def concat(img1, img2, height=1080):
     return image
 
 def draw(vis: FastVisualizer, img, keypoint, box, oks, oks_unnorm, 
+         draw_non_transparent_area=True,
          draw_human_keypoints=True,
-         draw_score_bar=True):
+         draw_score_bar=False):
     vis.set_image(img)
-    vis.draw_non_transparent_area(box)
-    if draw_score_bar:
-        vis.draw_score_bar(oks)
+    if draw_non_transparent_area:
+        vis.draw_non_transparent_area(box)
     if draw_human_keypoints:
         vis.draw_human_keypoints(keypoint, oks_unnorm)
+    if draw_score_bar:
+        vis.draw_score_bar(oks)
     return vis.get_image()
 
-def main(video1, video2, draw_human_keypoints,
+def main(video1,
+         video2, 
+         cache,
+         vis_choices,
          progress=gr.Progress(track_tqdm=True)):
-    # build PoseInferencerV2
-    config = 'configs/mark2.py'
-    cfg = mmengine.Config.fromfile(config)
-    pose_inferencer = PoseInferencerV2(
+    # build PoseInferencerV3
+    cfg = OmegaConf.load('configs/mark3.yaml')
+    pose_inferencer = PoseInferencerV3(
                         cfg.det_cfg,
                         cfg.pose_cfg,
                         device='cpu')
     
-    v1 = mmcv.VideoReader(video1)
-    v2 = mmcv.VideoReader(video2)
+    v1 = VideoReader(video1)
+    v2 = VideoReader(video2)
     video_writer = None
 
-    all_det1, all_pose1 = pose_inferencer.inference_video(video1)
-    all_det2, all_pose2 = pose_inferencer.inference_video(video2)
+    
+    # cache
+    cache_file = Path('results.cache')
+        
+    if not cache or not cache_file.exists():
+        all_bboxes1, all_keyopints1 = pose_inferencer.inference_video(video1)
+        all_bboxes2, all_keyopints2 = pose_inferencer.inference_video(video2)
 
-    keypoints1 = np.stack([p.keypoints[0] for p in all_pose1])  # forced the first pred
-    keypoints2 = np.stack([p.keypoints[0] for p in all_pose2])
-    boxes1 = np.stack([d.bboxes[0] for d in all_det1])
-    boxes2 = np.stack([d.bboxes[0] for d in all_det2])
+        # There might be multi people in the fig, we force to use the first pred
+        keypoints1 = np.stack([pts[0] for pts in all_keyopints1])  
+        keypoints2 = np.stack([pts[0] for pts in all_keyopints2])
+        boxes1 = np.stack([bboxes[0] for bboxes in all_bboxes1])
+        boxes2 = np.stack([bboxes[0] for bboxes in all_bboxes2])
 
-    dtw_path, oks, oks_unnorm = DTWForKeypoints(keypoints1, keypoints2).get_dtw_path()
+        dtw_path, oks, oks_unnorm = DTWForKeypoints(keypoints1, keypoints2).get_dtw_path()
+        if cache:
+            cache_file.touch(exist_ok=True)
+            with open(cache_file, 'wb') as f:
+                pickle.dump([keypoints1, keypoints2, boxes1, boxes2, dtw_path, oks, oks_unnorm], f)
+    else:
+        assert cache_file.exists()
+        with open(cache_file, 'rb') as f:
+            keypoints1, keypoints2, boxes1, boxes2, dtw_path, oks, oks_unnorm = pickle.load(f)
+
+    # output_name with timestamp
+    stamp = time.strftime("%y%m%H%M%S", time.localtime()) 
+    output_name = 'tennis_' + stamp + '.mp4'
 
     vis = FastVisualizer()
+
+    # vis choices
+    draw_non_transparent_area = True if "检测框蒙版" in vis_choices else False 
+    draw_human_keypoints = True if "人体关键点" in vis_choices else False
+    draw_score_bar = True if "匹配得分" in vis_choices else False
     
     for i, j in tqdm(dtw_path, desc='Visualizing'): 
         frame1 = v1[i]
         frame2 = v2[j]
 
-        frame1_ = draw(vis, frame1.copy(), keypoints1[i], boxes1[i],
-                       oks[i, j], oks_unnorm[i, j], draw_human_keypoints)
-        frame2_ = draw(vis, frame2.copy(), keypoints2[j], boxes2[j],
-                       oks[i, j], oks_unnorm[i, j], draw_human_keypoints, draw_score_bar=False)
+        frame1_ = draw(vis,
+                       frame1.copy(),
+                       keypoints1[i],
+                       boxes1[i],
+                       oks[i, j],
+                       oks_unnorm[i, j], 
+                       draw_non_transparent_area,
+                       draw_human_keypoints,
+                       draw_score_bar)
+
+        frame2_ = draw(vis,
+                       frame2.copy(),
+                       keypoints2[j],
+                       boxes2[j],
+                       oks[i, j],
+                       oks_unnorm[i, j],
+                       draw_non_transparent_area,
+                       draw_human_keypoints)
+
         # concate two frames
         frame = concat(frame1_, frame2_)
-        # draw logo
-        vis.set_image(frame)
-        frame = vis.draw_logo().get_image()
         # write video
         w, h = frame.shape[1], frame.shape[0]
         if video_writer is None:
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            video_writer = cv2.VideoWriter('dtw_compare.mp4', 
+            video_writer = cv2.VideoWriter(output_name, 
                                             fourcc, v1.fps, (w, h))
         video_writer.write(frame)
     video_writer.release()
-    # output video file
-    convert_video_to_playable_mp4('dtw_compare.mp4')
-    output = str(Path('dtw_compare.mp4').resolve())
-    return output
+    convert_video_to_playable_mp4(output_name)
+    add_logo_to_video(output_name, 'assets/logo.png', (w, h))
+
+    yield output_name   # make it a generator so it can show stop button
 
 if __name__ == '__main__':
-    config = 'configs/mark2.py'
-    cfg = mmengine.Config.fromfile(config)
 
     inputs = [
-        gr.Video(label="Input video 1"),
-        gr.Video(label="Input video 2"),
-        "checkbox"
+        gr.Video(label="Input video 1", height=200),
+        gr.Video(label="Input video 2", height=200),
+        gr.Checkbox(value=True, label="使用缓存", info='该选项将会在推理时保存中间结果results.cache，如果该文件不存在则仍会重新推理'),
+        gr.CheckboxGroup(["检测框蒙版", "人体关键点", "匹配得分"], label="可视化选项",
+                          value=["人体关键点", "匹配得分"]),
     ]
 
-    output = gr.Video(label="Output video")
+    output = gr.Video(label="Output video", height=400)
 
-    demo = gr.Interface(fn=main, inputs=inputs, outputs=output,
+    demo = gr.Interface(fn=main,
+                        inputs=inputs,
+                        outputs=output,
+                        examples=[["assets/tennis1.mp4", "assets/tennis2.mp4", None]],
                         allow_flagging='never').queue()
     demo.launch()

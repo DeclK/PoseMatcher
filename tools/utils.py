@@ -1,8 +1,9 @@
-from mmdet.datasets import CocoDataset
 import time
 from pathlib import Path
-from ffmpy import FFmpeg
+from PIL import Image
+import ffmpeg
 import shutil
+import os
 import tempfile
 from easydict import EasyDict
 import numpy as np
@@ -60,7 +61,19 @@ def get_keypoint_weight(low_weight_ratio=0.1, mid_weight_ratio=0.5):
     return weights
 
 def coco_cat_id_table():
-    classes = CocoDataset.METAINFO['classes']
+    classes = ( 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train',
+                'truck', 'boat', 'traffic light', 'fire hydrant', 'stop sign',
+                'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep',
+                'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella',
+                'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard',
+                'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard',
+                'surfboard', 'tennis racket', 'bottle', 'wine glass', 'cup', 'fork',
+                'knife', 'spoon', 'bowl', 'banana', 'apple', 'sandwich', 'orange',
+                'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair',
+                'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'tv',
+                'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave',
+                'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase',
+                'scissors', 'teddy bear', 'hair drier', 'toothbrush')
     id2name = {i: name for i, name in enumerate(classes)}
 
     return id2name
@@ -95,17 +108,46 @@ def convert_video_to_playable_mp4(video_path: str) -> str:
         output_path = Path(video_path).with_suffix(".mp4")
         with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
             shutil.copy2(video_path, tmp_file.name)
-            # ffmpeg will automatically use h264 codec (playable in browser) when converting to mp4
-            ff = FFmpeg(
-                inputs={str(tmp_file.name): None},
-                outputs={str(output_path): None},
-                global_options="-y -loglevel quiet",
-            )
-            ff.run()
+            command = (ffmpeg
+                            .input(tmp_file.name)
+                            .output(output_path.name)
+                            .overwrite_output()
+                            .run())
+        # had to delete it by hand on windows
+        # link https://stackoverflow.com/questions/15588314/cant-access-temporary-files-created-with-tempfile
+        os.remove(tmp_file.name)
     except:
-        print(f"Error converting video to browser-playable format {str(e)}")
-        output_path = video_path
-    return str(output_path)
+        print(f"Error when converting video to browser-playable format.")
+
+def add_logo_to_video(video_path: str, logo_path: str, video_size,
+                      logo_scale=300, shift=(0, 0)):
+    """ Add logo to video.
+    Args:
+        - `video_size` is the size of video, (w, h)
+        - `logo_scale` is the width of logo, height is adaptive
+        - `shift` is the shift of logo position from the down-right corner
+    """
+    # resize the logo to a fixed width
+    logo = Image.open(logo_path)
+    logo_w, logo_h = logo.size
+    logo_h = int(logo_h / logo_w * logo_scale)
+    logo_w = logo_scale
+    logo = logo.resize((logo_w, logo_h))
+    try:
+        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+            shutil.copy2(video_path, tmp_file.name)
+            input_video = ffmpeg.input(tmp_file.name)
+            logo = ffmpeg.input(logo_path).filter("scale", logo_scale, -1)
+            x = video_size[0] - logo_w - shift[0]
+            y = video_size[1] - logo_h - shift[1]
+            overlay_video = ffmpeg.overlay(input_video, logo, x=x, y=y)
+
+            command =(ffmpeg.output(overlay_video, video_path)
+                            .overwrite_output()
+                            .run())
+        os.remove(tmp_file.name)
+    except:
+        print(f"Error when adding logo to video.")
 
 class Timer:
     def __init__(self):

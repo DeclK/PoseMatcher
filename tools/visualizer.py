@@ -91,7 +91,7 @@ class FastVisualizer:
         return self
 
     def draw_text(self, text, position,
-                  font_path='assets/SmileySans/SmileySans-Oblique.ttf',
+                  font_path='assets/SmileySans-Oblique.ttf',
                   font_size=20,
                   text_color=(255, 255, 255)):
         """ Position is the left top corner of the text

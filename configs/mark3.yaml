@@ -1,0 +1,8 @@
+det_cfg:
+    model_path: 'model_zoo/rtmpose-ort/rtmdet-nano'
+
+pose_cfg:
+    model_path: 'model_zoo/rtmpose-ort/rtmpose-m'
+
+video1: 'assets/tennis1.mp4'
+video2: 'assets/tennis2.mp4'
