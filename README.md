@@ -12,7 +12,7 @@
 
 😀 具有广泛的应用场景，能够便捷匹配和评估两人的姿态
 
-<video src='assets/demo.mp4' height=300/>
+https://github.com/DeclK/PoseMatcher/assets/68807035/7e7767b2-3e35-4926-bdaf-dde885f44d83
 
 ## 下载
 
