@@ -1,4 +1,4 @@
-# Tennis.ai
+# Deep Learning @ Tennis
 
 深度学习➕网球🎾
 
@@ -10,10 +10,9 @@
 
 🔥 构建了一个简约快速且美观的可视化流程
 
-😀 具有广泛的应用场景，对于我来说就是网球啦
+😀 具有广泛的应用场景，能够便捷匹配和评估两人的姿态
 
-![](assets/demo.mp4)
-
+<video src='assets/demo.mp4' height=300/>
 ## 下载
 
 ### Windows
