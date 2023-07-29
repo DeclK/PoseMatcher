@@ -18,7 +18,7 @@ https://github.com/DeclK/PoseMatcher/assets/68807035/7e7767b2-3e35-4926-bdaf-dde
 
 ### Windows
 
-从 [百度网盘](https://pan.baidu.com/s/157uf7NqJ2kYb2QYRzUMbHw?pwd=1vwu)（提取码1vwu）或者 [Github-Rlease](https://github.com/DeclK/PoseMatcher/releases/tag/v2.0.0) 下载 `PoseMatcher.zip` 压缩包，解压过后运行 `run.bat` 即可
+从 [百度网盘](https://pan.baidu.com/s/157uf7NqJ2kYb2QYRzUMbHw?pwd=1vwu)（提取码1vwu）或者 [Github-Release](https://github.com/DeclK/PoseMatcher/releases/tag/v2.0.0) 下载 `PoseMatcher.zip` 压缩包，解压过后运行 `run.bat` 即可
 
 ### Mac
 
