@@ -18,7 +18,7 @@ import cv2
 BASE_DIR =  Path(sys.argv[0]).parent
 
 def add_ffmpeg_to_path():
-    os.environ['PATH'] += os.pathsep + str(BASE_DIR / 'bin')
+    os.environ['PATH'] += os.pathsep + str(BASE_DIR / 'ffmpeg')
 
 def concat(img1, img2, height=1080):
     h1, w1, _ = img1.shape
@@ -142,7 +142,7 @@ def main(video1,
 if __name__ == '__main__':
 
     add_ffmpeg_to_path()
-    
+
     inputs = [
         gr.Video(label="Input video 1", height=180),
         gr.Video(label="Input video 2", height=180),

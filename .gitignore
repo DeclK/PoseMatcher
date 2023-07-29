@@ -1,6 +1,6 @@
 tempt*
 *cache*
-bin
+ffmpeg
 dist
 build
 *.spec
