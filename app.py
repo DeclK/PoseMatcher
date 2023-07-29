@@ -15,7 +15,7 @@ import numpy as np
 import os
 import cv2
 
-BASE_DIR =  Path(sys.argv[0]).parent
+BASE_DIR =  Path(sys.argv[0]).resolve().parent
 
 def add_ffmpeg_to_path():
     os.environ['PATH'] += os.pathsep + str(BASE_DIR / 'ffmpeg')
