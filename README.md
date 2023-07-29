@@ -13,6 +13,7 @@
 😀 具有广泛的应用场景，能够便捷匹配和评估两人的姿态
 
 <video src='assets/demo.mp4' height=300/>
+
 ## 下载
 
 ### Windows
