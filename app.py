@@ -137,7 +137,7 @@ def main(video1,
     convert_video_to_playable_mp4(output_name)
     add_logo_to_video(output_name, 'assets/logo.png', (w, h))
 
-    yield output_name   # make it a generator so it can show stop button
+    return output_name   # make it a generator so it can show stop button
 
 if __name__ == '__main__':
 
@@ -165,4 +165,4 @@ if __name__ == '__main__':
                         thumbnail='logo.png',
                         article='### Github @[PoseMatcher](https://github.com/DeclK/PoseMatcher), please contact @[DeclK](https://github.com/DeclK) if you are interested in this project.'
                         ).queue()
-    demo.launch()
+    demo.launch(inbrowser=True)
