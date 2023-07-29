@@ -105,12 +105,10 @@ def convert_video_to_playable_mp4(video_path: str) -> str:
     Convert the video to mp4. If something goes wrong return the original video.
     """
     try:
-        output_path = Path(video_path).with_suffix(".mp4")
         with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
             shutil.copy2(video_path, tmp_file.name)
-            command = (ffmpeg
-                            .input(tmp_file.name)
-                            .output(output_path.name)
+            command = (ffmpeg.input(tmp_file.name)
+                            .output(video_path)
                             .overwrite_output()
                             .run())
         # had to delete it by hand on windows
@@ -142,7 +140,7 @@ def add_logo_to_video(video_path: str, logo_path: str, video_size,
             y = video_size[1] - logo_h - shift[1]
             overlay_video = ffmpeg.overlay(input_video, logo, x=x, y=y)
 
-            command =(ffmpeg.output(overlay_video, video_path)
+            command = (ffmpeg.output(overlay_video, video_path)
                             .overwrite_output()
                             .run())
         os.remove(tmp_file.name)

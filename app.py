@@ -9,9 +9,16 @@ from omegaconf import OmegaConf
 from pathlib import Path
 import pickle
 import time
+import sys
 import gradio as gr
 import numpy as np
+import os
 import cv2
+
+BASE_DIR =  Path(sys.argv[0]).parent
+
+def add_ffmpeg_to_path():
+    os.environ['PATH'] += os.pathsep + str(BASE_DIR / 'bin')
 
 def concat(img1, img2, height=1080):
     h1, w1, _ = img1.shape
@@ -46,6 +53,7 @@ def main(video1,
          video2, 
          cache,
          vis_choices,
+         progress=gr.Progress(track_tqdm=True)
          ):
     # build PoseInferencerV3
     cfg = OmegaConf.load('configs/mark3.yaml')
@@ -83,7 +91,8 @@ def main(video1,
 
     # output_name with timestamp
     stamp = time.strftime("%y%m%H%M%S", time.localtime()) 
-    output_name = 'tennis_' + stamp + '.mp4'
+    output_name = BASE_DIR.parent / ('tennis_' + stamp + '.mp4')
+    output_name = str(output_name)
 
     vis = FastVisualizer()
 
@@ -132,9 +141,11 @@ def main(video1,
 
 if __name__ == '__main__':
 
+    add_ffmpeg_to_path()
+    
     inputs = [
-        gr.Video(label="Input video 1", height=200),
-        gr.Video(label="Input video 2", height=200),
+        gr.Video(label="Input video 1", height=180),
+        gr.Video(label="Input video 2", height=180),
         gr.Checkbox(value=True, label="使用缓存", 
                     info='result.cache 是在推理中生成的中间结果，使用该选项将会直接使用该缓存结果，避免重复推理。\
                         但如果你提交了与上一次推理不同的视频，请先取消该选项，生成新的缓存后再启用'),
@@ -142,11 +153,16 @@ if __name__ == '__main__':
                           value=["人体关键点", "匹配得分"]),
     ]
 
-    output = gr.Video(label="Output video", height=400)
+    output = gr.Video(label="Output video", height=360)
 
     demo = gr.Interface(fn=main,
                         inputs=inputs,
                         outputs=output,
+                        # might show wrong example preview, just clean the cookie & cache of browser
                         examples=[["assets/tennis1.mp4", "assets/tennis2.mp4", None]],
-                        allow_flagging='never').queue()
+                        allow_flagging='never',
+                        title='PoseMatcher',
+                        thumbnail='logo.png',
+                        article='### Github @[PoseMatcher](https://github.com/DeclK/PoseMatcher), please contact @[DeclK](https://github.com/DeclK) if you are interested in this project.'
+                        ).queue()
     demo.launch()
