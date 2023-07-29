@@ -46,7 +46,7 @@ def main(video1,
          video2, 
          cache,
          vis_choices,
-         progress=gr.Progress(track_tqdm=True)):
+         ):
     # build PoseInferencerV3
     cfg = OmegaConf.load('configs/mark3.yaml')
     pose_inferencer = PoseInferencerV3(
@@ -73,10 +73,9 @@ def main(video1,
         boxes2 = np.stack([bboxes[0] for bboxes in all_bboxes2])
 
         dtw_path, oks, oks_unnorm = DTWForKeypoints(keypoints1, keypoints2).get_dtw_path()
-        if cache:
-            cache_file.touch(exist_ok=True)
-            with open(cache_file, 'wb') as f:
-                pickle.dump([keypoints1, keypoints2, boxes1, boxes2, dtw_path, oks, oks_unnorm], f)
+        cache_file.touch(exist_ok=True)
+        with open(cache_file, 'wb') as f:
+            pickle.dump([keypoints1, keypoints2, boxes1, boxes2, dtw_path, oks, oks_unnorm], f)
     else:
         assert cache_file.exists()
         with open(cache_file, 'rb') as f:
@@ -136,7 +135,9 @@ if __name__ == '__main__':
     inputs = [
         gr.Video(label="Input video 1", height=200),
         gr.Video(label="Input video 2", height=200),
-        gr.Checkbox(value=True, label="使用缓存", info='该选项将会在推理时保存中间结果results.cache，如果该文件不存在则仍会重新推理'),
+        gr.Checkbox(value=True, label="使用缓存", 
+                    info='result.cache 是在推理中生成的中间结果，使用该选项将会直接使用该缓存结果，避免重复推理。\
+                        但如果你提交了与上一次推理不同的视频，请先取消该选项，生成新的缓存后再启用'),
         gr.CheckboxGroup(["检测框蒙版", "人体关键点", "匹配得分"], label="可视化选项",
                           value=["人体关键点", "匹配得分"]),
     ]
