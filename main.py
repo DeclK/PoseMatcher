@@ -9,6 +9,12 @@ import time
 from omegaconf import OmegaConf
 import numpy as np
 import cv2
+###################
+
+#第二个人
+
+
+#########
 
 def concat(img1, img2, height=1080):
     h1, w1, _ = img1.shape
