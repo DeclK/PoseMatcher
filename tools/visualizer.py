@@ -207,6 +207,7 @@ class FastVisualizer:
         cube_y0 = bar_start_point[1] - bar_h // 2 - cube_size
         cube_x1 = cube_x0 + cube_size
         cube_y1 = cube_y0 + cube_size
+        cube_x0 , cube_y0 , cube_x1 , cube_y1 = map(int, (cube_x0 , cube_y0 , cube_x1 , cube_y1))
         # draw cube
         self.draw_rectangle((cube_x0, cube_y0, cube_x1, cube_y1),
                              color=self.colors.cube)
@@ -219,6 +220,91 @@ class FastVisualizer:
         # draw text
         if lvl_name == 'vamos':
             lvl_name = 'vamos!!'    # exciting!
+        self.draw_text(lvl_name.capitalize(),
+                       word_positions[lvl],
+                       font_size=bar_h * 2,
+                       text_color=tuple(colors[lvl].tolist()))
+
+        return self
+    
+    
+    
+    def get_sim(self , score):
+        t = self.lvl_tresh
+        level = 0 if  score <= t[1] else (1 if score <= t[2] else 2)
+        within_ratio = 0.0
+        if score < t[1]: # t[0] might bigger than 0
+            within_ratio = (score - t[0]) / (t[1] - t[0])
+            within_ratio = np.clip(within_ratio, a_min=0, a_max=1)
+        elif score < t[2]: 
+            within_ratio = (score - t[1]) / (t[2] - t[1])
+        else: 
+            within_ratio = (score - t[2]) / (1 - t[2])
+        return level , within_ratio , ((score - t[0])/(1 - t[0]) if score > t[0] else 0.0)
+    
+    def get_name(self , level):
+        look_list = ["bad", "good", "vamos"]
+        return look_list[level]
+            
+        
+    
+    
+    def draw_sim_bar(self, score, factor=50, bar_ratio=7):
+        """ Draw a score bar on the left top of the image.
+        factor: the value of image longer edge divided by the bar height
+        bar_ratio: the ratio of bar width to bar height
+        """
+        # calculate bar's height and width
+        long_edge = np.max(self.image.shape[:2])
+        short_edge = np.min(self.image.shape[:2])
+        bar_h = long_edge // factor
+        bar_w = bar_h * bar_ratio
+        if bar_w * 3 > short_edge:
+            # when the image width is not enough
+            bar_w = short_edge // 4
+            bar_h = bar_w // bar_ratio
+        cube_size = bar_h
+        # bar's base position
+        bar_start_point = (2*bar_h, 2*bar_h)
+        # draw bar horizontally, and record the position of each word
+        word_positions = []
+        box_coords = []
+        colors = [self.colors.bad, self.colors.good, self.colors.vamos]
+        for i, color in enumerate(colors):
+            x0, y0 = bar_start_point[0] + i*bar_w,  bar_start_point[1]
+            x1, y1 = x0 + bar_w - 1,  y0 + bar_h
+            box_coord = np.array((x0, y0, x1, y1), dtype=np.int32)
+            self.draw_rectangle(box_coord, color=color)
+
+            box_coords.append(box_coord)
+            word_positions.append(np.array((x0, y1 + bar_h // 2)))
+        # calculate cube position according to score
+        lvl , within_ratio , sim_ratio = self.get_sim(score)
+        #lvl, lvl_ratio, lvl_name = self.score_level(score)
+        # the first level start point is the first bar
+        cube_lvl_start_x0 = [box_coord[0] - cube_size // 2 if i != 0 
+                             else box_coord[0] 
+                             for i, box_coord in enumerate(box_coords)]
+        # process the last level, I want the cube stays in the bar
+        level_length = bar_w if lvl == 1 else bar_w - cube_size // 2
+        cube_x0 = cube_lvl_start_x0[lvl] + within_ratio * level_length
+        cube_y0 = bar_start_point[1] - bar_h // 2 - cube_size
+        cube_x1 = cube_x0 + cube_size
+        cube_y1 = cube_y0 + cube_size
+        cube_x0 , cube_y0 , cube_x1 , cube_y1 = map(int, (cube_x0 , cube_y0 , cube_x1 , cube_y1))
+        # draw cube
+        self.draw_rectangle((cube_x0, cube_y0, cube_x1, cube_y1),
+                             color=self.colors.cube)
+        # enlarge the box, to emphasize the level
+        enlarged_box = box_coords[lvl].copy()
+        enlarged_box[:2] = enlarged_box[:2] - bar_h // 8
+        enlarged_box[2:] = enlarged_box[2:] + bar_h // 8
+        self.draw_rectangle(enlarged_box, color=self.colors[self.get_name(lvl)])
+
+        # draw text
+        # if lvl_name == 'vamos':
+        #     lvl_name = 'vamos!!'    # exciting!
+        lvl_name = "Sim = " + str(int(sim_ratio*100)) + "%"
         self.draw_text(lvl_name.capitalize(),
                        word_positions[lvl],
                        font_size=bar_h * 2,

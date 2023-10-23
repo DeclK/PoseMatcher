@@ -1,0 +1,14 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[remote "origin"]
+	url = git@github.com:knightzzz9w/HPE_startup.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[remote "origin2"]
+	url = git@github.com:knightzzz9w/HPE_startup.git
+	fetch = +refs/heads/*:refs/remotes/origin2/*
+[branch "new_branch"]
+	remote = origin
+	merge = refs/heads/new_branch
